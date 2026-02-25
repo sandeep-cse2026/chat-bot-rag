@@ -11,7 +11,7 @@ import structlog
 from flask import Flask
 from flask_cors import CORS
 
-from app.config import get_settings
+from app.config import get_settings, Settings
 from app.utils.logger import setup_logging
 from app.middleware.request_id import init_request_id_middleware
 from app.middleware.error_handlers import register_error_handlers
@@ -26,8 +26,9 @@ def create_app() -> Flask:
     - Request ID middleware
     - Global error handlers
     - CORS configuration
+    - Service initialization (API clients, LLM, orchestrator)
     - Startup validation
-    - Blueprint registration (health)
+    - Blueprint registration (health, chat)
 
     Returns:
         Configured Flask application instance.
@@ -54,17 +55,21 @@ def create_app() -> Flask:
     # ── CORS ──────────────────────────────────────────────────────────
     CORS(app, resources={
         r"/chat": {"origins": "*"},
+        r"/chat/*": {"origins": "*"},
         r"/health": {"origins": "*"},
     })
+
+    # ── Services ──────────────────────────────────────────────────────
+    _init_services(app, settings)
 
     # ── Startup validation ────────────────────────────────────────────
     _validate_startup(settings, logger)
 
     # ── Blueprints ────────────────────────────────────────────────────
     from app.routes.health import health_bp
+    from app.routes.chat import chat_bp
     app.register_blueprint(health_bp)
-
-    # Note: chat_bp will be registered in Phase 6
+    app.register_blueprint(chat_bp)
 
     logger.info(
         "app_started",
@@ -76,12 +81,78 @@ def create_app() -> Flask:
     return app
 
 
-def _validate_startup(settings, logger) -> None:
+def _init_services(app: Flask, settings: Settings) -> None:
+    """Initialize API clients, LLM service, and chat orchestrator.
+
+    All services are stored on `app.config` for access via `current_app`.
+
+    Args:
+        app: Flask application instance.
+        settings: Application settings.
+    """
+    from app.api_clients.jikan_client import JikanClient
+    from app.api_clients.tvmaze_client import TVMazeClient
+    from app.api_clients.openlibrary_client import OpenLibraryClient
+    from app.services.llm_service import LLMService
+    from app.services.tool_router import ToolRouter
+    from app.services.chat_orchestrator import ChatOrchestrator
+
+    logger = structlog.get_logger(__name__)
+    logger.info("initializing_services")
+
+    # API Clients
+    jikan = JikanClient(
+        base_url=settings.JIKAN_BASE_URL,
+        rate_limit=settings.JIKAN_RATE_LIMIT,
+        timeout=settings.HTTP_TIMEOUT,
+        max_retries=settings.HTTP_MAX_RETRIES,
+        cache_ttl=settings.CACHE_TTL_SECONDS,
+        cache_max_size=settings.CACHE_MAX_SIZE,
+    )
+    tvmaze = TVMazeClient(
+        base_url=settings.TVMAZE_BASE_URL,
+        rate_limit=settings.TVMAZE_RATE_LIMIT,
+        timeout=settings.HTTP_TIMEOUT,
+        max_retries=settings.HTTP_MAX_RETRIES,
+        cache_ttl=settings.CACHE_TTL_SECONDS,
+        cache_max_size=settings.CACHE_MAX_SIZE,
+    )
+    openlibrary = OpenLibraryClient(
+        base_url=settings.OPENLIBRARY_BASE_URL,
+        rate_limit=settings.OPENLIBRARY_RATE_LIMIT,
+        timeout=settings.HTTP_TIMEOUT,
+        max_retries=settings.HTTP_MAX_RETRIES,
+        cache_ttl=settings.CACHE_TTL_SECONDS,
+        cache_max_size=settings.CACHE_MAX_SIZE,
+    )
+
+    # LLM Service
+    llm_service = LLMService(
+        api_key=settings.OPENROUTER_API_KEY,
+        model=settings.OPENROUTER_MODEL,
+        base_url=settings.OPENROUTER_BASE_URL,
+    )
+
+    # Tool Router
+    tool_router = ToolRouter(jikan, tvmaze, openlibrary)
+
+    # Chat Orchestrator
+    orchestrator = ChatOrchestrator(llm_service, tool_router, settings)
+
+    # Store on app config for access via current_app
+    app.config["ORCHESTRATOR"] = orchestrator
+    app.config["LLM_SERVICE"] = llm_service
+    app.config["JIKAN_CLIENT"] = jikan
+    app.config["TVMAZE_CLIENT"] = tvmaze
+    app.config["OPENLIBRARY_CLIENT"] = openlibrary
+
+    logger.info("services_initialized")
+
+
+def _validate_startup(settings: Settings, logger) -> None:
     """Run startup validation — fail fast if critical dependencies are missing.
 
-    Checks:
-    1. OpenRouter API key is set (already validated by Pydantic)
-    2. External APIs are reachable (warnings only, non-blocking)
+    Checks external API reachability (warnings only, non-blocking).
 
     Args:
         settings: Application settings instance.
@@ -89,7 +160,6 @@ def _validate_startup(settings, logger) -> None:
     """
     logger.info("startup_validation", phase="begin")
 
-    # External API reachability (non-blocking — only log warnings)
     api_checks = [
         ("Jikan", settings.JIKAN_BASE_URL),
         ("TVMaze", f"{settings.TVMAZE_BASE_URL}/shows/1"),

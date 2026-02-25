@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entertainment & Books Chatbot</title>
+    <meta name="description" content="AI-powered chatbot for discovering anime, manga, TV shows, and books.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="logo">
+                        <span class="logo-icon">✦</span>
+                        <h1>EntertainBot</h1>
+                    </div>
+                    <span class="header-subtitle">Anime · TV Shows · Books</span>
+                </div>
+                <div class="header-right">
+                    <button class="btn-clear" id="clearBtn" title="New conversation">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        <span>New Chat</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Messages -->
+        <main class="chat-messages" id="chatMessages">
+            <!-- Welcome Message -->
+            <div class="welcome-container" id="welcomeMessage">
+                <div class="welcome-icon">✦</div>
+                <h2>Welcome to EntertainBot</h2>
+                <p>I can help you discover and learn about anime, manga, TV shows, and books. Ask me anything!</p>
+                <div class="suggestion-chips">
+                    <button class="chip chip-anime" data-message="What are the top anime right now?">🎌 Top anime right now</button>
+                    <button class="chip chip-tv" data-message="Tell me about Breaking Bad">📺 Tell me about Breaking Bad</button>
+                    <button class="chip chip-books" data-message="Search for books by Tolkien">📚 Books by Tolkien</button>
+                    <button class="chip chip-anime" data-message="What anime are similar to Attack on Titan?">🎌 Similar to Attack on Titan</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="chat-input-area">
+            <form class="input-container" id="chatForm">
+                <input
+                    type="text"
+                    class="chat-input"
+                    id="chatInput"
+                    placeholder="Ask about anime, TV shows, or books..."
+                    autocomplete="off"
+                    maxlength="2000"
+                >
+                <button type="submit" class="btn-send" id="sendBtn" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </form>
+            <div class="input-footer">
+                <span class="powered-by">Powered by Jikan · TV Maze · Open Library · OpenRouter</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
