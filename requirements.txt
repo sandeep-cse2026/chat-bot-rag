@@ -1,0 +1,25 @@
+# Web Framework
+flask==3.1.*
+gunicorn==23.*
+flask-cors==5.*
+
+# Validation & Config
+pydantic==2.*
+pydantic-settings==2.*
+
+# HTTP Client
+httpx==0.28.*
+
+# Logging
+structlog==24.*
+
+# Security / Sanitization
+markupsafe==3.*
+
+# Utilities
+python-dotenv==1.*
+
+# Testing
+pytest==8.*
+pytest-mock==3.*
+pytest-cov==6.*
