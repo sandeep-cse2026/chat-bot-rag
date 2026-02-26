@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     CACHE_TTL_SECONDS: int = Field(default=300, ge=0, description="API response cache TTL (seconds)")
     CACHE_MAX_SIZE: int = Field(default=256, ge=1, description="Max number of cached API responses")
 
+    # ── Conversation Logging ─────────────────────────────────────────
+    CONVERSATION_LOG_DIR: str = Field(default="logs/conversations", description="Directory for conversation log files")
+    CONVERSATION_LOG_ENABLED: bool = Field(default=True, description="Enable conversation logging")
+
     # ── Validators ────────────────────────────────────────────────────
 
     @field_validator("OPENROUTER_API_KEY")

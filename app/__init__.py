@@ -68,8 +68,10 @@ def create_app() -> Flask:
     # ── Blueprints ────────────────────────────────────────────────────
     from app.routes.health import health_bp
     from app.routes.chat import chat_bp
+    from app.routes.logs import logs_bp
     app.register_blueprint(health_bp)
     app.register_blueprint(chat_bp)
+    app.register_blueprint(logs_bp)
 
     logger.info(
         "app_started",
@@ -96,6 +98,7 @@ def _init_services(app: Flask, settings: Settings) -> None:
     from app.services.llm_service import LLMService
     from app.services.tool_router import ToolRouter
     from app.services.chat_orchestrator import ChatOrchestrator
+    from app.services.conversation_logger import ConversationLogger
 
     logger = structlog.get_logger(__name__)
     logger.info("initializing_services")
@@ -136,8 +139,16 @@ def _init_services(app: Flask, settings: Settings) -> None:
     # Tool Router
     tool_router = ToolRouter(jikan, tvmaze, openlibrary)
 
+    # Conversation Logger (optional)
+    conv_logger = None
+    if settings.CONVERSATION_LOG_ENABLED:
+        conv_logger = ConversationLogger(log_dir=settings.CONVERSATION_LOG_DIR)
+
     # Chat Orchestrator
-    orchestrator = ChatOrchestrator(llm_service, tool_router, settings)
+    orchestrator = ChatOrchestrator(
+        llm_service, tool_router, settings,
+        conversation_logger=conv_logger,
+    )
 
     # Store on app config for access via current_app
     app.config["ORCHESTRATOR"] = orchestrator
@@ -145,6 +156,7 @@ def _init_services(app: Flask, settings: Settings) -> None:
     app.config["JIKAN_CLIENT"] = jikan
     app.config["TVMAZE_CLIENT"] = tvmaze
     app.config["OPENLIBRARY_CLIENT"] = openlibrary
+    app.config["CONVERSATION_LOGGER"] = conv_logger
 
     logger.info("services_initialized")
 

@@ -12,6 +12,7 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import threading
 import time
 from typing import Any
@@ -40,6 +41,7 @@ class ChatOrchestrator:
         llm_service: LLMService instance for OpenRouter communication.
         tool_router: ToolRouter instance for function execution.
         settings: Application settings.
+        conversation_logger: Optional ConversationLogger for structured logging.
     """
 
     def __init__(
@@ -47,10 +49,12 @@ class ChatOrchestrator:
         llm_service: LLMService,
         tool_router: ToolRouter,
         settings: Settings,
+        conversation_logger=None,
     ) -> None:
         self._llm = llm_service
         self._router = tool_router
         self._settings = settings
+        self._conv_logger = conversation_logger
 
         # Session management
         self._sessions: dict[str, ConversationHistory] = {}
@@ -85,6 +89,11 @@ class ChatOrchestrator:
         history = self._get_or_create_session(session_id)
         history.add_user_message(user_message)
 
+        # Start conversation logging for this interaction
+        interaction = None
+        if self._conv_logger:
+            interaction = self._conv_logger.start_interaction(session_id, user_message)
+
         logger.info(
             "processing_message",
             session_id=session_id,
@@ -93,10 +102,14 @@ class ChatOrchestrator:
         )
 
         try:
-            response_text = self._run_conversation_loop(history)
+            response_text = self._run_conversation_loop(history, interaction)
 
             # Add the final response to history
             history.add_assistant_message(response_text)
+
+            # Finalize conversation log
+            if self._conv_logger and interaction:
+                self._conv_logger.end_interaction(interaction, response_text)
 
             logger.info(
                 "message_processed",
@@ -162,7 +175,9 @@ class ChatOrchestrator:
 
     # ── Core Loop ─────────────────────────────────────────────────────
 
-    def _run_conversation_loop(self, history: ConversationHistory) -> str:
+    def _run_conversation_loop(
+        self, history: ConversationHistory, interaction=None
+    ) -> str:
         """Run the LLM conversation loop with tool calling.
 
         Sends the conversation to the LLM. If the LLM responds with
@@ -171,6 +186,7 @@ class ChatOrchestrator:
 
         Args:
             history: The conversation history for this session.
+            interaction: Optional InteractionLog for conversation logging.
 
         Returns:
             The final text response from the LLM.
@@ -181,6 +197,15 @@ class ChatOrchestrator:
                 messages=history.messages,
                 tools=self._tools,
             )
+
+            # Log this LLM call
+            if self._conv_logger and interaction:
+                self._conv_logger.log_llm_call(
+                    interaction,
+                    iteration=iteration,
+                    finish_reason=llm_response.finish_reason,
+                    tokens=llm_response.usage,
+                )
 
             # If the LLM returned a text response, we're done
             if not llm_response.has_tool_calls:
@@ -199,12 +224,26 @@ class ChatOrchestrator:
 
             # Execute each tool call and add results
             for tool_call in llm_response.tool_calls:
+                start_time = time.time()
                 result = self._execute_tool_call(tool_call.name, tool_call.arguments)
+                duration_ms = (time.time() - start_time) * 1000
+
                 history.add_tool_result(
                     tool_call_id=tool_call.id,
                     name=tool_call.name,
                     result=result,
                 )
+
+                # Log the tool call
+                if self._conv_logger and interaction:
+                    result_summary = self._summarize_tool_result(result)
+                    self._conv_logger.log_tool_call(
+                        interaction,
+                        tool_name=tool_call.name,
+                        arguments=tool_call.arguments,
+                        result_summary=result_summary,
+                        duration_ms=duration_ms,
+                    )
 
         # If we've exhausted iterations, ask the LLM for a final answer
         # without tools to force a text response
@@ -216,6 +255,16 @@ class ChatOrchestrator:
             messages=history.messages,
             tools=None,  # No tools — force text response
         )
+
+        # Log the final forced LLM call
+        if self._conv_logger and interaction:
+            self._conv_logger.log_llm_call(
+                interaction,
+                iteration=MAX_TOOL_ITERATIONS + 1,
+                finish_reason=final_response.finish_reason,
+                tokens=final_response.usage,
+            )
+
         return final_response.content or "I gathered some data but couldn't formulate a response. Please try again."
 
     def _execute_tool_call(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -245,6 +294,28 @@ class ChatOrchestrator:
                 exc_info=True,
             )
             return f'{{"error": "An unexpected error occurred while executing \'{tool_name}\'"}}'
+
+    @staticmethod
+    def _summarize_tool_result(result: str) -> str:
+        """Create a brief summary of a tool result for logging.
+
+        Args:
+            result: JSON string result from the tool.
+
+        Returns:
+            Human-readable summary (e.g., "Found 5 results").
+        """
+        try:
+            data = json.loads(result)
+            if "error" in data:
+                return f"Error: {data['error'][:80]}"
+            if "count" in data:
+                return f"Found {data['count']} results"
+            if "result" in data and isinstance(data["result"], str):
+                return data["result"][:80]
+            return f"Result ({len(result)} chars)"
+        except (json.JSONDecodeError, KeyError):
+            return f"Raw result ({len(result)} chars)"
 
     # ── Session Management ────────────────────────────────────────────
 
