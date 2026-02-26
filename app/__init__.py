@@ -99,6 +99,7 @@ def _init_services(app: Flask, settings: Settings) -> None:
     from app.services.tool_router import ToolRouter
     from app.services.chat_orchestrator import ChatOrchestrator
     from app.services.conversation_logger import ConversationLogger
+    from app.services.context_service import ContextService
 
     logger = structlog.get_logger(__name__)
     logger.info("initializing_services")
@@ -144,10 +145,19 @@ def _init_services(app: Flask, settings: Settings) -> None:
     if settings.CONVERSATION_LOG_ENABLED:
         conv_logger = ConversationLogger(log_dir=settings.CONVERSATION_LOG_DIR)
 
+    # Context Service (ChromaDB vector DB)
+    context_service = ContextService(
+        persist_dir=settings.CHROMA_PERSIST_DIR,
+        collection_name=settings.CHROMA_COLLECTION_NAME,
+        max_results=settings.CONTEXT_MAX_RESULTS,
+        similarity_threshold=settings.CONTEXT_SIMILARITY_THRESHOLD,
+    )
+
     # Chat Orchestrator
     orchestrator = ChatOrchestrator(
         llm_service, tool_router, settings,
         conversation_logger=conv_logger,
+        context_service=context_service,
     )
 
     # Store on app config for access via current_app
@@ -157,6 +167,7 @@ def _init_services(app: Flask, settings: Settings) -> None:
     app.config["TVMAZE_CLIENT"] = tvmaze
     app.config["OPENLIBRARY_CLIENT"] = openlibrary
     app.config["CONVERSATION_LOGGER"] = conv_logger
+    app.config["CONTEXT_SERVICE"] = context_service
 
     logger.info("services_initialized")
 

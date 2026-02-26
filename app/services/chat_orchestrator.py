@@ -50,11 +50,13 @@ class ChatOrchestrator:
         tool_router: ToolRouter,
         settings: Settings,
         conversation_logger=None,
+        context_service=None,
     ) -> None:
         self._llm = llm_service
         self._router = tool_router
         self._settings = settings
         self._conv_logger = conversation_logger
+        self._context = context_service
 
         # Session management
         self._sessions: dict[str, ConversationHistory] = {}
@@ -87,6 +89,18 @@ class ChatOrchestrator:
             ChatBotError: On LLM or tool execution failure.
         """
         history = self._get_or_create_session(session_id)
+
+        # Retrieve relevant past context from vector DB
+        if self._context:
+            try:
+                contexts = self._context.retrieve_context(session_id, user_message)
+                if contexts:
+                    context_text = self._context.format_context_for_prompt(contexts)
+                    # Inject as a system-level context message before the user message
+                    history.inject_context(context_text)
+            except Exception as e:
+                logger.warning("context_retrieval_skipped", error=str(e))
+
         history.add_user_message(user_message)
 
         # Start conversation logging for this interaction
@@ -110,6 +124,22 @@ class ChatOrchestrator:
             # Finalize conversation log
             if self._conv_logger and interaction:
                 self._conv_logger.end_interaction(interaction, response_text)
+
+            # Store this interaction in vector DB for future retrieval
+            if self._context:
+                try:
+                    # Collect tool names used during this interaction
+                    tool_names = (
+                        [tc.tool_name for tc in interaction.tool_calls]
+                        if interaction and interaction.tool_calls
+                        else None
+                    )
+                    self._context.store_interaction(
+                        session_id, user_message, response_text,
+                        tool_calls=tool_names,
+                    )
+                except Exception as e:
+                    logger.warning("context_store_skipped", error=str(e))
 
             logger.info(
                 "message_processed",

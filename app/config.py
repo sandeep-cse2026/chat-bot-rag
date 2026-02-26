@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     CONVERSATION_LOG_DIR: str = Field(default="logs/conversations", description="Directory for conversation log files")
     CONVERSATION_LOG_ENABLED: bool = Field(default=True, description="Enable conversation logging")
 
+    # ── Vector DB (ChromaDB) ─────────────────────────────────────────
+    CHROMA_PERSIST_DIR: str = Field(default="data/chromadb", description="ChromaDB persistence directory")
+    CHROMA_COLLECTION_NAME: str = Field(default="conversations", description="ChromaDB collection name")
+    CONTEXT_MAX_RESULTS: int = Field(default=3, ge=1, le=10, description="Max context results to retrieve")
+    CONTEXT_SIMILARITY_THRESHOLD: float = Field(default=1.2, ge=0.0, le=2.0, description="Max distance for context relevance")
+
     # ── Validators ────────────────────────────────────────────────────
 
     @field_validator("OPENROUTER_API_KEY")

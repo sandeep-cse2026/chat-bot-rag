@@ -19,6 +19,9 @@ markupsafe==3.*
 # Utilities
 python-dotenv==1.*
 
+# Vector Database
+chromadb==0.6.*
+
 # Testing
 pytest==8.*
 pytest-mock==3.*

@@ -373,6 +373,20 @@ class ConversationHistory:
         })
         # Don't trim after tool results — they need to stay paired with tool_calls
 
+    def inject_context(self, context_text: str) -> None:
+        """Inject retrieved context as a system message.
+
+        Adds context just before the next user message so the LLM
+        can reference it when generating its response.
+
+        Args:
+            context_text: Formatted context string from ContextService.
+        """
+        self._messages.append({
+            "role": "system",
+            "content": context_text,
+        })
+
     def clear(self) -> None:
         """Clear all messages except the system prompt."""
         system_msg = None
