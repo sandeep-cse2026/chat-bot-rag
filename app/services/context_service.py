@@ -48,8 +48,26 @@ class ContextService:
         self._max_results = max_results
         self._similarity_threshold = similarity_threshold
 
-        # Initialize persistent ChromaDB client
-        self._client = chromadb.PersistentClient(path=persist_dir)
+        # Initialize persistent ChromaDB client with retry logic
+        # Multiple Gunicorn workers may race to init/migrate the SQLite DB
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            try:
+                self._client = chromadb.PersistentClient(path=persist_dir)
+                break
+            except Exception as e:
+                if attempt < max_retries:
+                    wait = attempt * 1.0  # 1s, 2s backoff
+                    logger.warning(
+                        "chromadb_init_retry",
+                        attempt=attempt,
+                        error=str(e),
+                        wait_seconds=wait,
+                    )
+                    time.sleep(wait)
+                else:
+                    logger.error("chromadb_init_failed", attempts=max_retries, error=str(e))
+                    raise
 
         # Get or create collection — uses default embedding function
         # (all-MiniLM-L6-v2, auto-downloaded on first use ~80MB)

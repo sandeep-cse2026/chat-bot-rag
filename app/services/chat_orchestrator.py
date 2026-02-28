@@ -28,7 +28,7 @@ from app.utils.exceptions import ChatBotError, ToolExecutionError
 logger = structlog.get_logger(__name__)
 
 # Maximum rounds of tool calling before forcing a text response
-MAX_TOOL_ITERATIONS = 3
+MAX_TOOL_ITERATIONS = 5
 
 
 class ChatOrchestrator:
