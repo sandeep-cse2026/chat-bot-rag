@@ -4,154 +4,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EntertainBot — Anime · TV Shows · Books</title>
-    <meta name="description" content="AI-powered chatbot for discovering anime, manga, TV shows, and books.">
+    <title>EntertainBot // Terminal</title>
+    <meta name="description" content="AI-powered terminal for discovering anime, manga, TV shows, and books.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
-    <div class="app-container">
+    <!-- Scanline overlay -->
+    <div class="scanlines"></div>
+
+    <div class="app-shell">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="brand">
-                    <div class="brand-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#brandGrad)"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <defs>
-                                <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stop-color="#a78bfa" />
-                                    <stop offset="100%" stop-color="#f472b6" />
-                                </linearGradient>
-                            </defs>
-                            <polygon
-                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                        </svg>
-                    </div>
+            <div class="sidebar-brand">
+                <div class="brand-badge">&gt;_</div>
+                <div class="brand-text">
                     <span class="brand-name">EntertainBot</span>
+                    <span class="brand-version">v2.0.0</span>
                 </div>
-                <button class="btn-new-chat" id="clearBtn" title="New conversation">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round">
-                        <path d="M12 5v14M5 12h14" />
-                    </svg>
-                    <span>New Chat</span>
+            </div>
+
+            <button class="btn-new" id="clearBtn">
+                <span class="btn-new-icon">+</span>
+                <span>NEW SESSION</span>
+            </button>
+
+            <nav class="sidebar-modules">
+                <div class="module-label">// MODULES</div>
+                <button class="module-item active" data-category="all">
+                    <span class="module-dot" style="--dot-color: #f0f0f0"></span>
+                    <span>all_topics</span>
                 </button>
-            </div>
-            <div class="sidebar-nav">
-                <div class="nav-label">Explore</div>
-                <div class="nav-items">
-                    <button class="nav-item active" data-category="all">
-                        <span class="nav-icon">💬</span> All Topics
-                    </button>
-                    <button class="nav-item" data-category="anime">
-                        <span class="nav-icon">🎌</span> Anime & Manga
-                    </button>
-                    <button class="nav-item" data-category="tv">
-                        <span class="nav-icon">📺</span> TV Shows
-                    </button>
-                    <button class="nav-item" data-category="books">
-                        <span class="nav-icon">📚</span> Books
-                    </button>
+                <button class="module-item" data-category="anime">
+                    <span class="module-dot" style="--dot-color: #ff2d95"></span>
+                    <span>anime_manga</span>
+                </button>
+                <button class="module-item" data-category="tv">
+                    <span class="module-dot" style="--dot-color: #00fff2"></span>
+                    <span>tv_shows</span>
+                </button>
+                <button class="module-item" data-category="books">
+                    <span class="module-dot" style="--dot-color: #ffe156"></span>
+                    <span>books_library</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-status">
+                <div class="status-row">
+                    <span class="status-label">STATUS</span>
+                    <span class="status-value status-online">● ONLINE</span>
                 </div>
-            </div>
-            <div class="sidebar-footer">
-                <div class="api-badges">
-                    <span class="badge">Jikan</span>
-                    <span class="badge">TVMaze</span>
-                    <span class="badge">OpenLibrary</span>
+                <div class="status-row">
+                    <span class="status-label">APIs</span>
+                    <span class="status-value">Jikan / TVMaze / OLib</span>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Chat Area -->
-        <div class="chat-area">
-            <!-- Top Bar (mobile menubutton + status) -->
-            <header class="top-bar">
-                <button class="btn-menu" id="menuBtn" title="Toggle sidebar">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round">
-                        <path d="M3 12h18M3 6h18M3 18h18" />
-                    </svg>
+        <!-- Main -->
+        <div class="main-panel">
+            <!-- Top bar -->
+            <header class="topbar">
+                <button class="btn-hamburger" id="menuBtn">
+                    <span></span><span></span><span></span>
                 </button>
-                <div class="top-bar-center">
-                    <div class="status-dot"></div>
-                    <span>EntertainBot</span>
+                <div class="topbar-title">
+                    <span class="topbar-prompt">&gt;</span> session_active
+                    <span class="topbar-cursor">█</span>
                 </div>
-                <div class="top-bar-right">
-                    <button class="btn-icon" id="clearBtnMobile" title="New conversation">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round">
-                            <path d="M12 5v14M5 12h14" />
-                        </svg>
-                    </button>
-                </div>
+                <button class="btn-icon-raw" id="clearBtnMobile" title="New session">
+                    <span>+</span>
+                </button>
             </header>
 
-            <!-- Chat Messages -->
-            <main class="chat-messages" id="chatMessages">
-                <!-- Welcome Message -->
-                <div class="welcome-container" id="welcomeMessage">
-                    <div class="welcome-glow"></div>
-                    <div class="welcome-icon-wrapper">
-                        <div class="welcome-icon">✦</div>
+            <!-- Chat -->
+            <main class="chat-feed" id="chatMessages">
+                <div class="welcome-screen" id="welcomeMessage">
+                    <div class="welcome-ascii">
+                        <pre class="ascii-art">
+ ╔══════════════════════════════╗
+ ║   E N T E R T A I N B O T   ║
+ ║       TERMINAL  v2.0.0       ║
+ ╚══════════════════════════════╝
+</pre>
                     </div>
-                    <h2>What can I help you discover?</h2>
-                    <p>Your AI-powered guide to anime, manga, TV shows, and books.</p>
-                    <div class="suggestion-grid">
-                        <button class="suggestion-card" data-message="What are the top anime right now?">
-                            <span class="suggestion-emoji">🎌</span>
-                            <span class="suggestion-title">Top Anime</span>
-                            <span class="suggestion-desc">Trending series this season</span>
+                    <p class="welcome-sub">Your AI-powered terminal for anime, TV shows &amp; books.</p>
+                    <p class="welcome-hint">Type a query or select a quick command below.</p>
+
+                    <div class="cmd-grid">
+                        <button class="cmd-card" data-message="What are the top anime right now?">
+                            <span class="cmd-prefix">$</span>
+                            <div class="cmd-body">
+                                <span class="cmd-title">top_anime --trending</span>
+                                <span class="cmd-desc">Fetch trending anime this season</span>
+                            </div>
                         </button>
-                        <button class="suggestion-card" data-message="Tell me about Breaking Bad">
-                            <span class="suggestion-emoji">📺</span>
-                            <span class="suggestion-title">Breaking Bad</span>
-                            <span class="suggestion-desc">Show details & ratings</span>
+                        <button class="cmd-card" data-message="Tell me about Breaking Bad">
+                            <span class="cmd-prefix">$</span>
+                            <div class="cmd-body">
+                                <span class="cmd-title">show --query "Breaking Bad"</span>
+                                <span class="cmd-desc">Lookup TV show details &amp; cast</span>
+                            </div>
                         </button>
-                        <button class="suggestion-card" data-message="Search for books by Tolkien">
-                            <span class="suggestion-emoji">📚</span>
-                            <span class="suggestion-title">Tolkien Books</span>
-                            <span class="suggestion-desc">Explore the author's works</span>
+                        <button class="cmd-card" data-message="Search for books by Tolkien">
+                            <span class="cmd-prefix">$</span>
+                            <div class="cmd-body">
+                                <span class="cmd-title">books --author "Tolkien"</span>
+                                <span class="cmd-desc">Explore an author's bibliography</span>
+                            </div>
                         </button>
-                        <button class="suggestion-card" data-message="What anime are similar to Attack on Titan?">
-                            <span class="suggestion-emoji">⚔️</span>
-                            <span class="suggestion-title">Similar Anime</span>
-                            <span class="suggestion-desc">Like Attack on Titan</span>
+                        <button class="cmd-card" data-message="What anime are similar to Attack on Titan?">
+                            <span class="cmd-prefix">$</span>
+                            <div class="cmd-body">
+                                <span class="cmd-title">similar --to "Attack on Titan"</span>
+                                <span class="cmd-desc">Find related anime recommendations</span>
+                            </div>
                         </button>
                     </div>
                 </div>
             </main>
 
-            <!-- Input Area -->
-            <footer class="input-area">
-                <form class="input-wrapper" id="chatForm">
-                    <div class="input-box">
-                        <textarea class="chat-input" id="chatInput" placeholder="Ask about anime, TV shows, or books..."
-                            autocomplete="off" maxlength="2000" rows="1"></textarea>
-                        <button type="submit" class="btn-send" id="sendBtn" disabled>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M5 12h14M12 5l7 7-7 7" />
-                            </svg>
+            <!-- Input -->
+            <footer class="input-dock">
+                <form class="input-shell" id="chatForm">
+                    <div class="input-row">
+                        <span class="input-prompt">&gt;</span>
+                        <textarea class="input-field" id="chatInput" placeholder="enter query..." autocomplete="off"
+                            maxlength="2000" rows="1"></textarea>
+                        <button type="submit" class="btn-exec" id="sendBtn" disabled>
+                            EXEC
                         </button>
                     </div>
                 </form>
-                <div class="input-footer">
-                    <span>Powered by <strong>Jikan</strong> · <strong>TV Maze</strong> · <strong>Open Library</strong> ·
-                        <strong>OpenRouter</strong></span>
+                <div class="input-meta">
+                    <span>SRC: Jikan API · TV Maze · Open Library · OpenRouter LLM</span>
                 </div>
             </footer>
         </div>
     </div>
 
-    <!-- Overlay for mobile sidebar -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 </body>
